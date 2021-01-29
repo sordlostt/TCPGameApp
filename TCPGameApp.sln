@@ -13,9 +13,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TCPServerLibrary", "TCPServ
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TCPClientLibrary", "TCPClientLibrary\TCPClientLibrary.csproj", "{4EF6C6A2-55BF-4A43-A376-1221B0D101D1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TCPServerApp", "TCPServerApp\TCPServerApp.csproj", "{8E962A2E-D9AC-4500-9D56-2D2F1E421B06}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TCPServerApp", "TCPServerApp\TCPServerApp.csproj", "{8E962A2E-D9AC-4500-9D56-2D2F1E421B06}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ServerLogic", "ServerLogic\ServerLogic.csproj", "{89674681-A163-4B0F-91EE-C0C7852BD80E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ServerLogic", "ServerLogic\ServerLogic.csproj", "{89674681-A163-4B0F-91EE-C0C7852BD80E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientLogic", "ClientLogic\ClientLogic.csproj", "{FD6A5093-ED87-4379-9B7B-F686145F78C1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -43,6 +45,10 @@ Global
 		{89674681-A163-4B0F-91EE-C0C7852BD80E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{89674681-A163-4B0F-91EE-C0C7852BD80E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{89674681-A163-4B0F-91EE-C0C7852BD80E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FD6A5093-ED87-4379-9B7B-F686145F78C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FD6A5093-ED87-4379-9B7B-F686145F78C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FD6A5093-ED87-4379-9B7B-F686145F78C1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FD6A5093-ED87-4379-9B7B-F686145F78C1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -117,10 +117,15 @@ namespace ServerLogic
 
         private void RegisterNewClient(int connectionID)
         {
-                var newClient = ClientFactory.CreateClient(connectionID);
-                newClient.role = clients.Count == 0 ? Client.Role.HOST : Client.Role.PLAYER;
-                if (newClient.role == Client.Role.HOST) Console.WriteLine($"Client {connectionID} is now host.");
-                clients.Add(newClient);
+            var newClient = ClientFactory.CreateClient(connectionID);
+            newClient.role = clients.Count == 0 ? Client.Role.HOST : Client.Role.PLAYER;
+            if (newClient.role == Client.Role.HOST)
+            {
+                Console.WriteLine($"Client {connectionID} is now host.");
+                server.Send("HOST<EOF>", connectionID);
+            }
+            clients.Add(newClient);
+            SendID(connectionID);
         }
 
         /*
@@ -163,6 +168,11 @@ namespace ServerLogic
             }
         }
 
+        private void SendID(int id)
+        {
+            server.Send($"ID;{id.ToString()}<EOF>", id);
+        }
+
         private void ProcessAnswer(Answer receivedAnswer)
         {
             var client = clients.Find(x => x.id == receivedAnswer.senderID);
@@ -171,12 +181,12 @@ namespace ServerLogic
                 client.points -= 2;
                 client.wrongAnswers += 1;
 
-                server.Send("WRONG", receivedAnswer.senderID);
+                server.Send("WRONG<EOF>", receivedAnswer.senderID);
 
                 // freeze player after three wrong answers in a row
                 if (client.wrongAnswers % 3 == 0 && client.wrongAnswers > 0)
                 {
-                    server.Send("FREEZE", receivedAnswer.senderID);
+                    server.Send("FREEZE<EOF>", receivedAnswer.senderID);
                 }    
             }
             else
@@ -206,7 +216,7 @@ namespace ServerLogic
 
             var winningClient = clients.Find(x => x.id == winningAnswer.senderID);
             winningClient.points += 1;
-            server.Send("RIGHT", winningClient.id);
+            server.Send("RIGHT<EOF>", winningClient.id);
         }
 
         private void SendQuestions()
@@ -221,7 +231,8 @@ namespace ServerLogic
             {
                 foreach (var client in clients)
                 {
-                    server.Send(question.questionText, client.id);
+                    string message = $"QUESTION;{question.questionText};{question.questionID}<EOF>";
+                    server.Send(message, client.id);
                 }
             }
         }
@@ -246,12 +257,12 @@ namespace ServerLogic
                 }
             }
 
-            server.Send("WIN", winner.id);
+            server.Send("WIN<EOF>", winner.id);
             clients.Remove(winner);
 
             foreach (var client in clients)
             {
-                server.Send("LOSE", client.id);
+                server.Send("LOSE<EOF>", client.id);
             }
 
             server.Shutdown();

@@ -19,10 +19,18 @@ namespace TCPClientLibrary
             return _instance;
         }
 
+        public AsynchronousClientSocket socket;
+
         public void Start()
         {
-            var socket = new AsynchronousClientSocket();
-            socket.Start(IPAddress.Parse("192.168.0.26"), 6969);
+            socket = new AsynchronousClientSocket();
+            socket.Init(IPAddress.Parse("192.168.0.26"), 6969);
+            socket.Connect();
+        }
+
+        public void Send(string message)
+        {
+            socket.Send(socket.state.workSocket, message);
         }
     }
 }
