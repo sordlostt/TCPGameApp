@@ -26,6 +26,8 @@ namespace TCPServerLibrary
 
         public AsynchronousListenerSocket socket = new AsynchronousListenerSocket();
 
+        Thread socketThread;
+
         public void Init()
         {
             socket = new AsynchronousListenerSocket();
@@ -34,7 +36,7 @@ namespace TCPServerLibrary
 
         public void Start()
         {
-            Thread socketThread = new Thread(socket.Start);
+            socketThread = new Thread(socket.Start);
             socketThread.Start();
         }
 
@@ -42,6 +44,18 @@ namespace TCPServerLibrary
         {
             var stateObject = socket.openConnections.Find(x => x.connectionID == connectionID);
             socket.Send(stateObject.workSocket, message);
+        }
+
+        public void Shutdown()
+        {
+            foreach (var connection in socket.openConnections)
+            {
+                connection.workSocket.Close();
+                socket.openConnections.Remove(connection);
+            }
+
+            socketThread.Abort();
+            System.Environment.Exit(0);
         }
     }
 }

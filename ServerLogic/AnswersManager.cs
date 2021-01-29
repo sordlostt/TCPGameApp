@@ -4,7 +4,7 @@ using System.Text;
 
 namespace ServerLogic
 {
-    public static class AnswerValidator
+    public static class AnswersManager
     {
         private static int currentQuestionIDX = -1;
 

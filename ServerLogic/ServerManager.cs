@@ -164,7 +164,7 @@ namespace ServerLogic
         private void ProcessAnswer(Answer receivedAnswer)
         {
             var client = clients.Find(x => x.id == receivedAnswer.senderID);
-            if (receivedAnswer.time > 5.0f || !AnswerValidator.ValidateAnswer(receivedAnswer.questionCode, receivedAnswer.answer))
+            if (receivedAnswer.time > 5.0f || !AnswersManager.ValidateAnswer(receivedAnswer.questionCode, receivedAnswer.answer))
             {
                 client.points -= 2;
                 client.wrongAnswers += 1;
@@ -209,7 +209,7 @@ namespace ServerLogic
 
         private void SendQuestions()
         {
-            var question = AnswerValidator.GetNextQuestion();
+            var question = AnswersManager.GetNextQuestion();
 
             if (question == null)
             {
@@ -246,8 +246,7 @@ namespace ServerLogic
                 server.Send("LOSE", client.id);
             }
 
-            //close server
-            //exit 
+            server.Shutdown();
         }
     }
 }
