@@ -24,13 +24,6 @@ namespace ServerLogic
         {
 
         }
-
-        public TCPServerLibrary.Server server;
-        List<Client> clients = new List<Client>();
-        List<Answer> correctAnswers = new List<Answer>();
-        int answersReceived;
-        bool stateInitProcedureDone;
-
         enum GameState
             {
                 IN_LOBBY,
@@ -42,6 +35,14 @@ namespace ServerLogic
             }
 
         GameState gameState;
+
+
+        public TCPServerLibrary.Server server;
+        List<Client> clients = new List<Client>();
+        List<Answer> correctAnswers = new List<Answer>();
+        int answersReceived;
+        bool stateInitProcedureDone;
+
 
         public void Init()
         {
@@ -60,6 +61,12 @@ namespace ServerLogic
                         server.Start();
                         server.socket.PlayerConnected += RegisterNewClient;
                         stateInitProcedureDone = true;
+                    }
+
+                    if (clients.Count == 4)
+                    {
+                        gameState = GameState.LOBBY_FILLED;
+                        stateInitProcedureDone = false;
                     }
                     break;
 
@@ -85,6 +92,13 @@ namespace ServerLogic
                         SendQuestions();
                         stateInitProcedureDone = true;
                     }
+
+                    if (answersReceived == 4)
+                    {
+                        DetermineRoundWinner();
+                        gameState = GameState.NEW_ROUND;
+                        stateInitProcedureDone = false;
+                    }
                     break;
 
                 case GameState.NEW_ROUND:
@@ -102,17 +116,9 @@ namespace ServerLogic
 
         private void RegisterNewClient(int connectionID)
         {
-            if (clients.Count < 4)
-            {
                 var newClient = ClientFactory.CreateClient(connectionID);
                 newClient.role = clients.Count == 1 ? Client.Role.HOST : Client.Role.PLAYER;
                 clients.Add(newClient);
-            }
-            else
-            {
-                gameState = GameState.LOBBY_FILLED;
-                stateInitProcedureDone = false;
-            }
         }
 
         /*
@@ -157,36 +163,48 @@ namespace ServerLogic
 
         private void ProcessAnswer(Answer receivedAnswer)
         {
-
+            var client = clients.Find(x => x.id == receivedAnswer.senderID);
             if (receivedAnswer.time > 5.0f || !AnswerValidator.ValidateAnswer(receivedAnswer.questionCode, receivedAnswer.answer))
             {
-                clients.Find(x => x.id == receivedAnswer.senderID).points -= 2;
+                client.points -= 2;
+                client.wrongAnswers += 1;
+
                 server.Send("WRONG", receivedAnswer.senderID);
+
+                // freeze player after three wrong answers in a row
+                if (client.wrongAnswers % 3 == 0 && client.wrongAnswers > 0)
+                {
+                    server.Send("FREEZE", receivedAnswer.senderID);
+                }    
             }
             else
             {
+                // clear player's wrong answer streak
+                client.wrongAnswers = 0;
+
                 correctAnswers.Add(receivedAnswer);
             }
 
-            if (answersReceived == 4)
+            answersReceived++;
+        }
+
+        private void DetermineRoundWinner()
+        {
+            float minTime = 5.0f;
+            Answer winningAnswer = null;
+
+            foreach (var answer in correctAnswers)
             {
-                float minTime = 5.0f;
-                Answer winningAnswer = null;
-
-                foreach (var answer in correctAnswers)
+                if (answer.time < minTime)
                 {
-                    if (answer.time < minTime)
-                    {
-                        minTime = answer.time;
-                        winningAnswer = answer;
-                    }
+                    minTime = answer.time;
+                    winningAnswer = answer;
                 }
-
-                clients.Find(x => x.id == winningAnswer.senderID).points += 1;
-                server.Send("RIGHT", winningAnswer.senderID);
-                gameState = GameState.NEW_ROUND;
-                stateInitProcedureDone = false;
             }
+
+            var winningClient = clients.Find(x => x.id == winningAnswer.senderID);
+            winningClient.points += 1;
+            server.Send("RIGHT", winningClient.id);
         }
 
         private void SendQuestions()

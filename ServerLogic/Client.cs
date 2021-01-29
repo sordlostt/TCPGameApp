@@ -15,5 +15,6 @@ namespace ServerLogic
         public Role role;
         public int id;
         public int points;
+        public int wrongAnswers;
     }
 }
