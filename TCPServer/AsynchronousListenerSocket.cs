@@ -7,7 +7,8 @@ using System.Net;
 
 namespace TCPServerLibrary
 {
-    public delegate void OnMessageReceived(int connectionID);
+    public delegate void OnConnectionStarted(int connectionID);
+    public delegate void OnMessageReceived(int connectionID, string message);
 
     public class StateObject
     {
@@ -24,16 +25,15 @@ namespace TCPServerLibrary
 
     public class AsynchronousListenerSocket
     {
-        public ManualResetEvent allDone = new ManualResetEvent(false);
+        public ManualResetEvent connectionDone = new ManualResetEvent(false);
 
-        public OnMessageReceived PlayerConnected;
+        public OnConnectionStarted PlayerConnected;
         public OnMessageReceived PlayerMessageReceived;
 
-        public List<StateObject> openConnections;
+        public List<StateObject> openConnections = new List<StateObject>();
 
-        public int connectionsLimit;
+        public int connectionsLimit = 4;
 
-        public string lastMessage;
 
         public IPEndPoint localEndPoint;
         public Socket listenerSocket;
@@ -57,13 +57,13 @@ namespace TCPServerLibrary
                 {
                     if (openConnections.Count < connectionsLimit)
                     {
-                        allDone.Reset();
+                        connectionDone.Reset();
  
                         listenerSocket.BeginAccept(
                             new AsyncCallback(AcceptCallback),
                             listenerSocket);
 
-                        allDone.WaitOne();
+                        connectionDone.WaitOne();
                     }
                 }
 
@@ -76,16 +76,27 @@ namespace TCPServerLibrary
 
        public void AcceptCallback(IAsyncResult ar)
         {
-            allDone.Set();
+            connectionDone.Set();
 
             Socket listener = (Socket)ar.AsyncState;
             Socket handler = listener.EndAccept(ar);
 
             StateObject state = new StateObject();
             state.workSocket = handler;
-            state.connectionID = new Random().Next(1000,1999);
+
+            var newStateID = new Random().Next(1000, 1999);
+            if (openConnections.Count > 0)
+            {
+                while (openConnections.Find(x => x.connectionID == newStateID) != null)
+                {
+                    newStateID = new Random().Next(1000, 1999);
+                }
+            }
+            state.connectionID = newStateID;
+
             openConnections.Add(state);
 
+            Console.WriteLine($"Client connected. Connection ID: {state.connectionID}");
             PlayerConnected?.Invoke(state.connectionID);
 
             handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
@@ -95,33 +106,41 @@ namespace TCPServerLibrary
         public void ReadCallback(IAsyncResult ar)
         {
             String content = String.Empty;
-
             StateObject state = (StateObject)ar.AsyncState;
             Socket handler = state.workSocket;
-
-            int bytesRead = handler.EndReceive(ar);
-
-            if (bytesRead > 0)
+            try
             {
-                state.sb.Append(Encoding.ASCII.GetString(
-                    state.buffer, 0, bytesRead));
+                int bytesRead = handler.EndReceive(ar);
 
-                content = state.sb.ToString();
-                if (content.IndexOf("<EOF>") > -1)
-                { 
-                    Console.WriteLine("Read {0} bytes from socket. \n Data : {1}",
-                        content.Length, content);
-
-                    lastMessage = content;
-                    PlayerMessageReceived?.Invoke(state.connectionID);
-
-                    Send(handler, content);
-                }
-                else
+                if (bytesRead > 0)
                 {
-                    handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
-                    new AsyncCallback(ReadCallback), state);
+                    state.sb.Append(Encoding.ASCII.GetString(
+                        state.buffer, 0, bytesRead));
+
+                    content = state.sb.ToString();
+                    if (content.IndexOf("<EOF>") > -1)
+                    {
+                        content = content.Remove(content.IndexOf("<EOF>"));
+                        Console.WriteLine($"Message from {state.connectionID}: {content}");
+                        PlayerMessageReceived?.Invoke(state.connectionID, content);
+                        state.buffer = new byte[StateObject.BufferSize];
+                        state.sb.Clear();
+                        handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
+                        new AsyncCallback(ReadCallback), state);
+                    }
+                    else
+                    {
+                        handler.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
+                        new AsyncCallback(ReadCallback), state);
+                    }
                 }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Client disconnected. Connection ID: {state.connectionID}");
+                handler.Shutdown(SocketShutdown.Both);
+                handler.Close();
+                openConnections.Remove(state);
             }
         }
 
@@ -140,10 +159,10 @@ namespace TCPServerLibrary
                 Socket handler = (Socket)ar.AsyncState;
  
                 int bytesSent = handler.EndSend(ar);
-                Console.WriteLine("Sent {0} bytes to client.", bytesSent);
+                //Console.WriteLine("Sent {0} bytes to client.", bytesSent);
 
-                handler.Shutdown(SocketShutdown.Both);
-                handler.Close();
+                //handler.Shutdown(SocketShutdown.Both);
+                //handler.Close();
 
             }
             catch (Exception e)

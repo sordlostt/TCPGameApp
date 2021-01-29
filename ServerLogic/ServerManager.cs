@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 
 namespace ServerLogic
@@ -67,6 +68,10 @@ namespace ServerLogic
                     {
                         answersReceived = 0;
                         server.socket.PlayerMessageReceived += ProcessClientMessage;
+                        foreach (var client in clients)
+                        {
+                            server.Send("NEXT", client.id);
+                        }
                         stateInitProcedureDone = true;
                     }
                     break;
@@ -75,7 +80,11 @@ namespace ServerLogic
                     break;
 
                 case GameState.PLAYING:
-
+                    if (!stateInitProcedureDone)
+                    {
+                        SendQuestions();
+                        stateInitProcedureDone = true;
+                    }
                     break;
 
                 case GameState.NEW_ROUND:
@@ -86,6 +95,7 @@ namespace ServerLogic
                     break;
 
                 case GameState.ENDING:
+                    EndGame();
                     break;
             }
         }
@@ -101,6 +111,7 @@ namespace ServerLogic
             else
             {
                 gameState = GameState.LOBBY_FILLED;
+                stateInitProcedureDone = false;
             }
         }
 
@@ -112,9 +123,9 @@ namespace ServerLogic
          * "1204;ANSWER:20:YES:4.25"
          */
 
-        private void ProcessClientMessage(int connectionID)
+        private void ProcessClientMessage(int connectionID, string message)
         {
-            var messageSplit = server.socket.lastMessage.Split(';');
+            var messageSplit = message.Split(';');
             int id = Int32.Parse(messageSplit[0]);
             Client sender = clients.Find(x => x.id == id);
 
@@ -125,7 +136,8 @@ namespace ServerLogic
                 case "START":
                     if (sender.role == Client.Role.HOST)
                     {
-                        gameState = GameState.STARTING;
+                        gameState = GameState.PLAYING;
+                        stateInitProcedureDone = false;
                     }
                     break;
                 case "ANSWER":
@@ -173,7 +185,51 @@ namespace ServerLogic
                 clients.Find(x => x.id == winningAnswer.senderID).points += 1;
                 server.Send("RIGHT", winningAnswer.senderID);
                 gameState = GameState.NEW_ROUND;
+                stateInitProcedureDone = false;
             }
+        }
+
+        private void SendQuestions()
+        {
+            var question = AnswerValidator.GetNextQuestion();
+
+            if (question == null)
+            {
+                gameState = GameState.ENDING;
+            }
+            else
+            {
+                foreach (var client in clients)
+                {
+                    server.Send(question.questionText, client.id);
+                }
+            }
+        }
+
+        private void EndGame()
+        {
+            Client winner = null;
+            int maxPoints = 0;
+
+            foreach (var client in clients)
+            {
+                if (client.points > maxPoints)
+                {
+                    maxPoints = client.points;
+                    winner = client;
+                }
+            }
+
+            server.Send("WIN", winner.id);
+            clients.Remove(winner);
+
+            foreach (var client in clients)
+            {
+                server.Send("LOSE", client.id);
+            }
+
+            //close server
+            //exit 
         }
     }
 }

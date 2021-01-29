@@ -6,6 +6,8 @@ namespace ServerLogic
 {
     public static class AnswerValidator
     {
+        private static int currentQuestionIDX = -1;
+
         // temporary solution
         private static List<Question> questions = new List<Question>()
         {
@@ -26,6 +28,20 @@ namespace ServerLogic
         {
             Question question = questions.Find(x => x.questionID == code);
             return (answer == question.answer);
+        }
+
+        public static Question GetNextQuestion()
+        {
+            currentQuestionIDX++;
+
+            if (currentQuestionIDX >= questions.Count)
+            {
+                return null;
+            }
+            else
+            {
+                return questions[currentQuestionIDX];
+            }
         }
     }
 }
