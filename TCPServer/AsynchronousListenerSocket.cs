@@ -8,6 +8,7 @@ using System.Net;
 namespace TCPServerLibrary
 {
     public delegate void OnConnectionStarted(int connectionID);
+    public delegate void OnConnectionEnded(int connectionID);
     public delegate void OnMessageReceived(int connectionID, string message);
 
     public class StateObject
@@ -28,6 +29,7 @@ namespace TCPServerLibrary
         public ManualResetEvent connectionDone = new ManualResetEvent(false);
 
         public OnConnectionStarted PlayerConnected;
+        public OnConnectionEnded PlayerDisconnected;
         public OnMessageReceived PlayerMessageReceived;
 
         public List<StateObject> openConnections = new List<StateObject>();
@@ -138,6 +140,7 @@ namespace TCPServerLibrary
             catch (Exception e)
             {
                 Console.WriteLine($"Client disconnected. Connection ID: {state.connectionID}");
+                PlayerDisconnected?.Invoke(state.connectionID);
                 handler.Shutdown(SocketShutdown.Both);
                 handler.Close();
                 openConnections.Remove(state);

@@ -60,6 +60,7 @@ namespace ServerLogic
                     {
                         server.Start();
                         server.socket.PlayerConnected += RegisterNewClient;
+                        server.socket.PlayerDisconnected += RemoveClient;
                         stateInitProcedureDone = true;
                     }
 
@@ -117,7 +118,8 @@ namespace ServerLogic
         private void RegisterNewClient(int connectionID)
         {
                 var newClient = ClientFactory.CreateClient(connectionID);
-                newClient.role = clients.Count == 1 ? Client.Role.HOST : Client.Role.PLAYER;
+                newClient.role = clients.Count == 0 ? Client.Role.HOST : Client.Role.PLAYER;
+                if (newClient.role == Client.Role.HOST) Console.WriteLine($"Client {connectionID} is now host.");
                 clients.Add(newClient);
         }
 
@@ -222,6 +224,12 @@ namespace ServerLogic
                     server.Send(question.questionText, client.id);
                 }
             }
+        }
+
+        private void RemoveClient(int connectionID)
+        {
+            Client clientToRemove = clients.Find(x => x.id == connectionID);
+            clients.Remove(clientToRemove);
         }
 
         private void EndGame()
