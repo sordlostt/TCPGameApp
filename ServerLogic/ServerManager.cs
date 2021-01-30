@@ -40,8 +40,10 @@ namespace ServerLogic
         public TCPServerLibrary.Server server;
         List<Client> clients = new List<Client>();
         List<Answer> correctAnswers = new List<Answer>();
+        Client host;
         int answersReceived;
         bool stateInitProcedureDone;
+        bool hostSignaled;
 
 
         public void Init()
@@ -72,7 +74,7 @@ namespace ServerLogic
                     break;
 
                 case GameState.LOBBY_FILLED:
-                    if (!stateInitProcedureDone)
+                    if (!stateInitProcedureDone && hostSignaled)
                     {
                         answersReceived = 0;
                         server.socket.PlayerMessageReceived += ProcessClientMessage;
@@ -80,7 +82,12 @@ namespace ServerLogic
                         {
                             server.Send("NEXT", client.id);
                         }
+                        gameState = GameState.NEW_ROUND;
                         stateInitProcedureDone = true;
+                    }
+                    else if(!stateInitProcedureDone && !hostSignaled)
+                    {
+                        server.Send("START", host.id);
                     }
                     break;
 
@@ -123,6 +130,7 @@ namespace ServerLogic
             {
                 Console.WriteLine($"Client {connectionID} is now host.");
                 server.Send("HOST<EOF>", connectionID);
+                host = newClient;
             }
             clients.Add(newClient);
             SendID(connectionID);

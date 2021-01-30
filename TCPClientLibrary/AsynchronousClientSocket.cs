@@ -69,15 +69,19 @@ namespace TCPClientLibrary
             }
         }
 
-        private void Receive(Socket client)
+        public void Receive()
         {
             try
             {
                 state = new StateObject();
-                state.workSocket = client;
- 
-                client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
-                    new AsyncCallback(ReceiveCallback), state);
+                state.workSocket = clientSocket;
+                receiveDone.Reset();
+                while (true)
+                {
+                    clientSocket.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
+                        new AsyncCallback(ReceiveCallback), state);
+                    receiveDone.WaitOne();
+                }
             }
             catch (Exception e)
             {
@@ -89,7 +93,7 @@ namespace TCPClientLibrary
         {
             try
             {
-                StateObject state = (StateObject)ar.AsyncState;
+                //StateObject state = (StateObject)ar.AsyncState;
                 Socket client = state.workSocket;
 
                 int bytesRead = client.EndReceive(ar);
@@ -108,8 +112,11 @@ namespace TCPClientLibrary
                         response = state.sb.ToString();
                         response = response.Remove(response.IndexOf("<EOF>"));
                         MessageReceived?.Invoke(response);
+                        state.buffer = new byte[StateObject.BufferSize];
+                        state.sb.Clear();
+                        receiveDone.Set();
                     } 
-                    receiveDone.Set();
+                    //receiveDone.Set();
                 }
             }
             catch (Exception e)

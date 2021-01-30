@@ -6,8 +6,8 @@ namespace TCPGameApp
     {
         static void Main(string[] args)
         {
-            var client = new TCPClientLibrary.Client();
-            client.Start();
+            var clientManager = ClientLogic.ClientManager.GetInstance();
+            clientManager.Init();
         }
     }
 }

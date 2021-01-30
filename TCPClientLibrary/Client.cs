@@ -26,6 +26,8 @@ namespace TCPClientLibrary
             socket = new AsynchronousClientSocket();
             socket.Init(IPAddress.Parse("192.168.0.26"), 6969);
             socket.Connect();
+            var socketThread = new System.Threading.Thread(socket.Receive);
+            socketThread.Start();
         }
 
         public void Send(string message)
