@@ -160,8 +160,7 @@ namespace TCPServerLibrary
             try
             {
                 Socket handler = (Socket)ar.AsyncState;
- 
-                int bytesSent = handler.EndSend(ar);
+                handler.EndSend(ar);
                 //Console.WriteLine("Sent {0} bytes to client.", bytesSent);
 
                 //handler.Shutdown(SocketShutdown.Both);

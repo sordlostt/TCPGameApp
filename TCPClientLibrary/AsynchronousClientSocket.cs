@@ -27,9 +27,10 @@ namespace TCPClientLibrary
             new ManualResetEvent(false);
 
         public OnMessageReceived MessageReceived;
-        public StateObject state;
 
         private static String response = String.Empty;
+
+        public StateObject state;
 
         Socket clientSocket;
         IPEndPoint remoteEP;
@@ -71,52 +72,48 @@ namespace TCPClientLibrary
 
         public void Receive()
         {
-            try
+            receiveDone.Reset();
+            while (true)
             {
-                state = new StateObject();
-                state.workSocket = clientSocket;
-                receiveDone.Reset();
-                while (true)
+                try
                 {
+                    state = new StateObject();
+                    state.workSocket = clientSocket;
                     clientSocket.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
                         new AsyncCallback(ReceiveCallback), state);
-                    receiveDone.WaitOne();
                 }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.ToString());
+                }
+                receiveDone.WaitOne();
             }
-            catch (Exception e)
-            {
-                Console.WriteLine(e.ToString());
-            }
-        }
+         }
 
         private void ReceiveCallback(IAsyncResult ar)
         {
             try
             {
-                //StateObject state = (StateObject)ar.AsyncState;
-                Socket client = state.workSocket;
-
+                StateObject arState = (StateObject)ar.AsyncState;
+                Socket client = arState.workSocket;
                 int bytesRead = client.EndReceive(ar);
 
                 if (bytesRead > 0)
-                { 
-                    state.sb.Append(Encoding.ASCII.GetString(state.buffer, 0, bytesRead));
-
-                    client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
-                        new AsyncCallback(ReceiveCallback), state);
+                {
+                    arState.sb.Append(Encoding.ASCII.GetString(state.buffer, 0, bytesRead));
+                    client.BeginReceive(arState.buffer, 0, StateObject.BufferSize, 0,
+                        new AsyncCallback(ReceiveCallback), arState);
                 }
                 else
                 {
-                    if (state.sb.Length > 1)
+                    if (arState.sb.Length > 1)
                     {
-                        response = state.sb.ToString();
-                        response = response.Remove(response.IndexOf("<EOF>"));
+                        response = arState.sb.ToString();
                         MessageReceived?.Invoke(response);
-                        state.buffer = new byte[StateObject.BufferSize];
-                        state.sb.Clear();
-                        receiveDone.Set();
-                    } 
-                    //receiveDone.Set();
+                        arState.buffer = new byte[StateObject.BufferSize];
+                        arState.sb.Clear();
+                    }
+                    receiveDone.Set();
                 }
             }
             catch (Exception e)

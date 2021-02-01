@@ -74,20 +74,23 @@ namespace ServerLogic
                     break;
 
                 case GameState.LOBBY_FILLED:
-                    if (!stateInitProcedureDone && hostSignaled)
+                    if (!stateInitProcedureDone)
                     {
                         answersReceived = 0;
                         server.socket.PlayerMessageReceived += ProcessClientMessage;
-                        foreach (var client in clients)
-                        {
-                            server.Send("NEXT", client.id);
-                        }
-                        gameState = GameState.NEW_ROUND;
+                        ClientMessageFactory.SendStartMessage(server, host.id);
                         stateInitProcedureDone = true;
                     }
-                    else if(!stateInitProcedureDone && !hostSignaled)
+
+                    if (hostSignaled)
                     {
-                        server.Send("START", host.id);
+                        foreach (var client in clients)
+                        {
+                            ClientMessageFactory.SendNextRoundMessage(server, client.id);
+                        }
+
+                        gameState = GameState.NEW_ROUND;
+                        stateInitProcedureDone = false;
                     }
                     break;
 
@@ -129,11 +132,11 @@ namespace ServerLogic
             if (newClient.role == Client.Role.HOST)
             {
                 Console.WriteLine($"Client {connectionID} is now host.");
-                server.Send("HOST<EOF>", connectionID);
+                ClientMessageFactory.SendHostMessage(server, connectionID);
                 host = newClient;
             }
             clients.Add(newClient);
-            SendID(connectionID);
+            ClientMessageFactory.SendIDMessage(server, connectionID);
         }
 
         /*
@@ -157,8 +160,7 @@ namespace ServerLogic
                 case "START":
                     if (sender.role == Client.Role.HOST)
                     {
-                        gameState = GameState.PLAYING;
-                        stateInitProcedureDone = false;
+                        hostSignaled = true;
                     }
                     break;
                 case "ANSWER":
@@ -176,11 +178,6 @@ namespace ServerLogic
             }
         }
 
-        private void SendID(int id)
-        {
-            server.Send($"ID;{id.ToString()}<EOF>", id);
-        }
-
         private void ProcessAnswer(Answer receivedAnswer)
         {
             var client = clients.Find(x => x.id == receivedAnswer.senderID);
@@ -189,12 +186,12 @@ namespace ServerLogic
                 client.points -= 2;
                 client.wrongAnswers += 1;
 
-                server.Send("WRONG<EOF>", receivedAnswer.senderID);
+                ClientMessageFactory.SendWrongAnswerMessage(server, receivedAnswer.senderID);
 
                 // freeze player after three wrong answers in a row
                 if (client.wrongAnswers % 3 == 0 && client.wrongAnswers > 0)
                 {
-                    server.Send("FREEZE<EOF>", receivedAnswer.senderID);
+                    ClientMessageFactory.SendFreezeMessage(server, receivedAnswer.senderID);
                 }    
             }
             else
@@ -224,7 +221,7 @@ namespace ServerLogic
 
             var winningClient = clients.Find(x => x.id == winningAnswer.senderID);
             winningClient.points += 1;
-            server.Send("RIGHT<EOF>", winningClient.id);
+            ClientMessageFactory.SendRightAnswerMessage(server, winningClient.id);
         }
 
         private void SendQuestions()
@@ -239,8 +236,7 @@ namespace ServerLogic
             {
                 foreach (var client in clients)
                 {
-                    string message = $"QUESTION;{question.questionText};{question.questionID}<EOF>";
-                    server.Send(message, client.id);
+                    ClientMessageFactory.SendQuestionMessage(server, client.id, question.questionText, question.questionID);
                 }
             }
         }
@@ -265,12 +261,12 @@ namespace ServerLogic
                 }
             }
 
-            server.Send("WIN<EOF>", winner.id);
+            ClientMessageFactory.SendWinMessage(server, winner.id);
             clients.Remove(winner);
 
             foreach (var client in clients)
             {
-                server.Send("LOSE<EOF>", client.id);
+                ClientMessageFactory.SendLoseMessage(server, client.id);
             }
 
             server.Shutdown();

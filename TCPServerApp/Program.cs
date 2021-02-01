@@ -8,7 +8,10 @@ namespace TCPServerApp
         {
             var serverManager = ServerLogic.ServerManager.GetInstance();
             serverManager.Init();
-            serverManager.Update();
+            while (true)
+            {
+                serverManager.Update();
+            }
         }
     }
 }

@@ -8,6 +8,11 @@ namespace TCPGameApp
         {
             var clientManager = ClientLogic.ClientManager.GetInstance();
             clientManager.Init();
+
+            while (true)
+            {
+                clientManager.Update();
+            }    
         }
     }
 }
