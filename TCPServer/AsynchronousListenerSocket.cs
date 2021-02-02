@@ -22,6 +22,8 @@ namespace TCPServerLibrary
         public Socket workSocket = null;
 
         public int connectionID;
+
+        public ManualResetEvent SendDone = new ManualResetEvent(false);
     }
 
     public class AsynchronousListenerSocket
@@ -85,6 +87,7 @@ namespace TCPServerLibrary
 
             StateObject state = new StateObject();
             state.workSocket = handler;
+            state.SendDone.Reset();
 
             var newStateID = new Random().Next(1000, 1999);
             if (openConnections.Count > 0)
@@ -147,20 +150,23 @@ namespace TCPServerLibrary
             }
         }
 
-        public void Send(Socket handler, String data)
-        { 
+        public void Send(StateObject state, String data)
+        {
             byte[] byteData = Encoding.ASCII.GetBytes(data);
-
-            handler.BeginSend(byteData, 0, byteData.Length, 0,
-                new AsyncCallback(SendCallback), handler);
+            state.workSocket.BeginSend(byteData, 0, byteData.Length, 0,
+                new AsyncCallback(SendCallback), state);
+            state.SendDone.WaitOne();
+            Thread.Sleep(100);
         }
 
         private void SendCallback(IAsyncResult ar)
         {
             try
             {
-                Socket handler = (Socket)ar.AsyncState;
+                StateObject state = (StateObject)ar.AsyncState;
+                Socket handler = state.workSocket;
                 handler.EndSend(ar);
+                state.SendDone.Set();
                 //Console.WriteLine("Sent {0} bytes to client.", bytesSent);
 
                 //handler.Shutdown(SocketShutdown.Both);
@@ -169,7 +175,7 @@ namespace TCPServerLibrary
             }
             catch (Exception e)
             {
-                // cos zrob
+                Console.Write(e);
             }
         }
     }

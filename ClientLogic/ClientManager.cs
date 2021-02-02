@@ -116,15 +116,7 @@ namespace ClientLogic
 
         private void ProcessServerMessage(string message)
         {
-            string processedMessage = "";
-            for (int i = 0; i < nextEOFindex; i++)
-            {
-                processedMessage = message.Substring(0, message.IndexOf("<EOF>"));
-                message.Remove(0, message.IndexOf("<EOF>") + 4);
-            }
-            nextEOFindex++;
-
-            var messageSplit = processedMessage.Split(';');
+            var messageSplit = message.Split(';');
             string operation = messageSplit[0];
 
             switch (operation)

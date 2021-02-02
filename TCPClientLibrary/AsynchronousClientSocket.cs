@@ -72,21 +72,16 @@ namespace TCPClientLibrary
 
         public void Receive()
         {
-            receiveDone.Reset();
-            while (true)
+            try
             {
-                try
-                {
-                    state = new StateObject();
-                    state.workSocket = clientSocket;
-                    clientSocket.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
-                        new AsyncCallback(ReceiveCallback), state);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.ToString());
-                }
-                receiveDone.WaitOne();
+                state = new StateObject();
+                state.workSocket = clientSocket;
+                clientSocket.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
+                    new AsyncCallback(ReceiveCallback), state);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
             }
          }
 
@@ -94,6 +89,7 @@ namespace TCPClientLibrary
         {
             try
             {
+                string content = string.Empty;
                 StateObject arState = (StateObject)ar.AsyncState;
                 Socket client = arState.workSocket;
                 int bytesRead = client.EndReceive(ar);
@@ -101,19 +97,21 @@ namespace TCPClientLibrary
                 if (bytesRead > 0)
                 {
                     arState.sb.Append(Encoding.ASCII.GetString(state.buffer, 0, bytesRead));
-                    client.BeginReceive(arState.buffer, 0, StateObject.BufferSize, 0,
-                        new AsyncCallback(ReceiveCallback), arState);
-                }
-                else
-                {
-                    if (arState.sb.Length > 1)
+                    content = arState.sb.ToString();
+                    if (content.IndexOf("<EOF>") > -1)
                     {
-                        response = arState.sb.ToString();
-                        MessageReceived?.Invoke(response);
-                        arState.buffer = new byte[StateObject.BufferSize];
-                        arState.sb.Clear();
+                        content = content.Remove(content.IndexOf("<EOF>"));
+                        MessageReceived?.Invoke(content);
+                        state.buffer = new byte[StateObject.BufferSize];
+                        state.sb.Clear();
+                        clientSocket.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
+                    new AsyncCallback(ReceiveCallback), state);
                     }
-                    receiveDone.Set();
+                    else
+                    {
+                        clientSocket.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0,
+                     new AsyncCallback(ReceiveCallback), state);
+                    }
                 }
             }
             catch (Exception e)

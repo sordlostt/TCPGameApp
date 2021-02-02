@@ -43,7 +43,7 @@ namespace TCPServerLibrary
         public void Send(string message, int connectionID)
         {
             var stateObject = socket.openConnections.Find(x => x.connectionID == connectionID);
-            socket.Send(stateObject.workSocket, message);
+            socket.Send(stateObject, message);
         }
 
         public void Shutdown()
