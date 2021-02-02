@@ -150,10 +150,10 @@ namespace ServerLogic
         private void ProcessClientMessage(int connectionID, string message)
         {
             var messageSplit = message.Split(';');
-            int id = Int32.Parse(messageSplit[0]);
+            int id = connectionID;
             Client sender = clients.Find(x => x.id == id);
 
-            var operationSplit = messageSplit[1].Split(':');
+            var operationSplit = messageSplit[0].Split(':');
 
             switch (operationSplit[0])
             {
@@ -181,7 +181,7 @@ namespace ServerLogic
         private void ProcessAnswer(Answer receivedAnswer)
         {
             var client = clients.Find(x => x.id == receivedAnswer.senderID);
-            if (receivedAnswer.time > 5.0f || !AnswersManager.ValidateAnswer(receivedAnswer.questionCode, receivedAnswer.answer))
+            if (receivedAnswer.time >= 5.0f || !AnswersManager.ValidateAnswer(receivedAnswer.questionCode, receivedAnswer.answer))
             {
                 client.points -= 2;
                 client.wrongAnswers += 1;

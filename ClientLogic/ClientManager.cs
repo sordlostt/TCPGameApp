@@ -49,6 +49,8 @@ namespace ClientLogic
             player = new Player();
             gamestate = GameState.IN_LOBBY;
             timer = new Utils.Timer();
+            timer.interval = 5.0f;
+            timer.TimeElapsed += SendNoAnswerMessage;
         }
 
         public void Update()
@@ -101,18 +103,22 @@ namespace ClientLogic
                     break;
 
                 case "YES":
-                    client.Send($"{player.id};ANSWER:{currentQuestionID}:YES:{timer.elapsed}<EOF>");
+                    client.Send($"ANSWER:{currentQuestionID}:YES:{timer.elapsed}<EOF>");
                     timer.raiseEvents = false;
                     break;
 
                 case "NO":
-                    client.Send($"{player.id};ANSWER:{currentQuestionID}:NO:{timer.elapsed}<EOF>");
+                    client.Send($"ANSWER:{currentQuestionID}:NO:{timer.elapsed}<EOF>");
                     timer.raiseEvents = false;
                     break;
             }
         }
 
-        int nextEOFindex = 1;
+        private void SendNoAnswerMessage()
+        {
+            client.Send($"ANSWER:{currentQuestionID}:NONE:{timer.elapsed}<EOF>");
+            timer.raiseEvents = false;
+        }
 
         private void ProcessServerMessage(string message)
         {
@@ -153,8 +159,8 @@ namespace ClientLogic
                     DisplayMessage($"Next round.");
                     if (!player.isFrozen)
                     {
-                        PromptInput($"{messageSplit[1]}");
                         timer.Start();
+                        PromptInput($"{messageSplit[1]}");
                     }
                     else
                     {

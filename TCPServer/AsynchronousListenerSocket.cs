@@ -74,7 +74,7 @@ namespace TCPServerLibrary
             }
             catch (Exception e)
             {
-                // tu cos wklej
+                Console.WriteLine(e); 
             }
         }
 
@@ -142,7 +142,7 @@ namespace TCPServerLibrary
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Client disconnected. Connection ID: {state.connectionID}");
+                Console.WriteLine(e);
                 PlayerDisconnected?.Invoke(state.connectionID);
                 handler.Shutdown(SocketShutdown.Both);
                 handler.Close();

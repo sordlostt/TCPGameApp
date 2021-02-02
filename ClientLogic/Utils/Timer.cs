@@ -22,20 +22,19 @@ namespace ClientLogic.Utils
             raiseEvents = true;
             stopWatch.Start();
             await Task.Run(() => Update());
+            if (raiseEvents)
+            {
+                TimeElapsed?.Invoke();
+            }
         }
 
         private void Update()
         {
             while (true)
             {
-                elapsed += stopWatch.ElapsedMilliseconds / 1000.0f;
+                elapsed = stopWatch.ElapsedMilliseconds / 1000.0f;
 
                 if (elapsed >= interval) break;
-            }
-
-            if (raiseEvents)
-            {
-                TimeElapsed?.Invoke();
             }
         }
     }

@@ -135,8 +135,6 @@ namespace TCPClientLibrary
                 Socket client = (Socket)ar.AsyncState;
  
                 int bytesSent = client.EndSend(ar);
-                Console.WriteLine("Sent {0} bytes to server.", bytesSent);
-
                 sendDone.Set();
             }
             catch (Exception e)
