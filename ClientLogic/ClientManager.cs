@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace ClientLogic
 {
@@ -42,6 +44,8 @@ namespace ClientLogic
         string currentQuestionText;
         string currentQuestionID;
 
+        ManualResetEvent OutputSemaphore = new ManualResetEvent(false);
+
         public void Init()
         {
             client = new TCPClientLibrary.Client();
@@ -51,6 +55,7 @@ namespace ClientLogic
             timer = new Utils.Timer();
             timer.interval = 5.0f;
             timer.TimeElapsed += SendNoAnswerMessage;
+            OutputSemaphore.Set();
         }
 
         public void Update()
@@ -80,6 +85,8 @@ namespace ClientLogic
             }
         }
 
+        Task inputTask;
+
         private void PromptInput(string promptMessage)
         {
             Console.WriteLine(promptMessage);
@@ -89,7 +96,14 @@ namespace ClientLogic
 
         private void DisplayMessage(string message)
         {
+            Task.Run(() => WriteLine(message));
+            OutputSemaphore.WaitOne();
+        }
+
+        private void WriteLine(string message)
+        {
             Console.WriteLine(message);
+            OutputSemaphore.Set();
         }
 
         private void ProcessInput(string input)
@@ -116,6 +130,8 @@ namespace ClientLogic
 
         private void SendNoAnswerMessage()
         {
+            var sim = new WindowsInput.InputSimulator();
+            sim.Keyboard.KeyDown(WindowsInput.Native.VirtualKeyCode.END);
             client.Send($"ANSWER:{currentQuestionID}:NONE:{timer.elapsed}<EOF>");
             timer.raiseEvents = false;
         }
@@ -160,10 +176,11 @@ namespace ClientLogic
                     if (!player.isFrozen)
                     {
                         timer.Start();
-                        PromptInput($"{messageSplit[1]}");
+                        inputTask = Task.Run(() => PromptInput($"{messageSplit[1]}"));
                     }
                     else
                     {
+                        SendNoAnswerMessage();
                         player.isFrozen = false;
                     }
                     break;
@@ -176,6 +193,18 @@ namespace ClientLogic
                 case "WRONG":
                     player.points -= 1;
                     DisplayMessage("Wrong answer, -1 point.");
+                    break;
+
+                case "WIN":
+                    DisplayMessage($"Congrats, you won! Your points:{player.points}\nPress anything to exit...");
+                    Console.ReadLine();
+                    Environment.Exit(0);
+                    break;
+
+                case "LOSE":
+                    DisplayMessage($"You lost, better luck next time. Your points:{player.points}\nPress anything to exit...");
+                    Console.ReadLine();
+                    Environment.Exit(0);
                     break;
             }
         }

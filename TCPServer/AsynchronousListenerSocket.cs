@@ -156,7 +156,7 @@ namespace TCPServerLibrary
             state.workSocket.BeginSend(byteData, 0, byteData.Length, 0,
                 new AsyncCallback(SendCallback), state);
             state.SendDone.WaitOne();
-            Thread.Sleep(100);
+            Thread.Sleep(200);
         }
 
         private void SendCallback(IAsyncResult ar)

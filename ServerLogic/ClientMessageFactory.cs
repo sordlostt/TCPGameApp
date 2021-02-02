@@ -54,7 +54,7 @@ namespace ServerLogic
 
         public static void SendLoseMessage(Server server, int clientID)
         {
-            server.Send("LOSE", clientID);
+            server.Send("LOSE<EOF>", clientID);
         }
     }
 }

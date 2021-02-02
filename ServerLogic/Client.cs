@@ -16,5 +16,6 @@ namespace ServerLogic
         public int id;
         public int points;
         public int wrongAnswers;
+        public bool isFrozen;
     }
 }

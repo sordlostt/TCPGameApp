@@ -101,7 +101,10 @@ namespace ServerLogic
                     if (!stateInitProcedureDone)
                     {
                         SendQuestions();
-                        stateInitProcedureDone = true;
+                        if (gameState != GameState.ENDING)
+                        {
+                            stateInitProcedureDone = true;
+                        }
                     }
 
                     if (answersReceived == 4)
@@ -120,7 +123,11 @@ namespace ServerLogic
                     break;
 
                 case GameState.ENDING:
-                    EndGame();
+                    if (!stateInitProcedureDone)
+                    {
+                        EndGame();
+                        stateInitProcedureDone = true;
+                    }
                     break;
             }
         }
@@ -183,15 +190,23 @@ namespace ServerLogic
             var client = clients.Find(x => x.id == receivedAnswer.senderID);
             if (receivedAnswer.time >= 5.0f || !AnswersManager.ValidateAnswer(receivedAnswer.questionCode, receivedAnswer.answer))
             {
-                client.points -= 2;
-                client.wrongAnswers += 1;
-
-                ClientMessageFactory.SendWrongAnswerMessage(server, receivedAnswer.senderID);
+                if (!client.isFrozen)
+                {
+                    client.points -= 2;
+                    client.wrongAnswers += 1;
+                    ClientMessageFactory.SendWrongAnswerMessage(server, receivedAnswer.senderID);
+                }
+                else
+                {
+                    client.isFrozen = false;
+                    client.wrongAnswers = 0;
+                }
 
                 // freeze player after three wrong answers in a row
                 if (client.wrongAnswers % 3 == 0 && client.wrongAnswers > 0)
                 {
                     ClientMessageFactory.SendFreezeMessage(server, receivedAnswer.senderID);
+                    client.isFrozen = true;
                 }    
             }
             else
@@ -219,9 +234,12 @@ namespace ServerLogic
                 }
             }
 
-            var winningClient = clients.Find(x => x.id == winningAnswer.senderID);
-            winningClient.points += 1;
-            ClientMessageFactory.SendRightAnswerMessage(server, winningClient.id);
+            if (winningAnswer != null)
+            {
+                var winningClient = clients.Find(x => x.id == winningAnswer.senderID);
+                winningClient.points += 1;
+                ClientMessageFactory.SendRightAnswerMessage(server, winningClient.id);
+            }
         }
 
         private void SendQuestions()
@@ -231,6 +249,7 @@ namespace ServerLogic
             if (question == null)
             {
                 gameState = GameState.ENDING;
+                stateInitProcedureDone = false;
             }
             else
             {
@@ -261,8 +280,11 @@ namespace ServerLogic
                 }
             }
 
-            ClientMessageFactory.SendWinMessage(server, winner.id);
-            clients.Remove(winner);
+            if (winner != null)
+            {
+                ClientMessageFactory.SendWinMessage(server, winner.id);
+                clients.Remove(winner);
+            }
 
             foreach (var client in clients)
             {
